@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SYNZIO ULTRA V4</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech&display=swap" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+
+  <style>
+    body {
+      background: linear-gradient(to bottom, #f0fdf4, #ecfdf5);
+      font-family: "El Messiri", sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 2rem;
+    }
+
+    header svg {
+      width: 100%;
+      max-width: 600px;
+      height: 80px;
+      margin-bottom: 1rem;
+    }
+
+.text {
+  font-size: 48px;
+  font-weight: 700;
+  fill: transparent;
+  stroke: #22c55e;
+  stroke-width: 2;
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: drawStroke 20s ease-in-out infinite, fillText 20s ease-in-out infinite 20s;
+}
+
+@keyframes drawStroke {
+  0%   { stroke-dashoffset: 1000; }
+  50%  { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: 1000; }
+}
+
+@keyframes fillText {
+  0%, 50% { fill: transparent; }
+  51%, 100% { fill: #22c55e; }
+}
+
+
+    .card-border { border: 4px solid #86efac; }
+    .glow-text { text-shadow: 0 0 5px rgba(34, 197, 94, 0.8); }
+    .confidence-bar { transition: width 0.5s ease-in-out; }
+    #historyContainer { max-height: 300px; overflow-y: auto; margin-top: 1rem; }
+    .history-card {
+      display: flex; justify-content: space-between; background: white; border-radius: 0.75rem;
+      padding: 0.75rem 1rem; margin-bottom: 0.5rem; align-items: center; font-weight: 600; border-left: 6px solid #86efac;
+    }
+
+    main { flex-grow: 1; max-width: 640px; width: 100%; display: flex; flex-direction: column; align-items: stretch; padding: 0 1rem; }
+
+    #predictionNotify {
+      position: fixed; top: 1rem; left: 50%; transform: translateX(-50%);
+      background: #16a34a; color: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: bold;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2); opacity: 0; pointer-events: none; transition: opacity 0.4s, transform 0.4s;
+      z-index: 50; display: flex; align-items: center; gap: 0.5rem;
+    }
+    #predictionNotify.show { opacity: 1; transform: translate(-50%, 0); }
+
+    nav {
+      position: fixed; bottom: 0; left: 0; right: 0; background: #f0fdf4; border-top: 2px solid #86efac;
+      display: flex; justify-content: space-around; padding: 0.5rem 0;
+    }
+    nav button {
+      background: none; border: none; font-size: 1rem; cursor: pointer; color: #4b5563;
+      display: flex; flex-direction: column; align-items: center; gap: 0.25rem; padding: 0.25rem 0.5rem; transition: color 0.3s ease;
+    }
+    
+nav button i {
+  transition: transform 0.3s ease;
+}
+
+/* Active icon continuous float */
+nav button.active i {
+  color: #16a34a;
+  animation: floatActive 1s ease-in-out infinite;
+}
+
+@keyframes floatActive {
+  0%   { transform: translateY(0); }
+  50%  { transform: translateY(-6px); }
+  100% { transform: translateY(0); }
+}
+  
+.settings-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    border-radius: 10px;
+    background: #f8f8f8;
+    margin: 5px 0;
+    cursor: pointer;
+}
+
+.settings-item i {
+    font-size: 18px;
+    color: #000;
+}
+
+    
+  </style>
+</head>
+<body>
+
+  <header>
+    <svg viewBox="0 0 500 100">
+      <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" class="text">SYNZIO ULTRA V4</text>
+    </svg>
+  </header>
+
+  <!-- Floating prediction notification -->
+  <div id="predictionNotify">
+    <i class="fa-solid fa-snowflake"></i>
+    <span id="notifyText">BET XXX ON BIG</span>
+  </div>
+
+<!-- Delete History Confirmation Modal -->
+<div id="deleteHistoryModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+  <div class="bg-white rounded-xl p-6 w-11/12 max-w-sm space-y-4 shadow-lg">
+    <h4 class="text-lg font-bold text-red-600">Confirm Delete</h4>
+    <p class="text-sm">Are you sure you want to delete all history?</p>
+    <div class="flex justify-end gap-2">
+      <button id="cancelDeleteHistory" class="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400">Cancel</button>
+      <button id="confirmDeleteHistory" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">Delete</button>
+    </div>
+  </div>
+</div>
+
+  <main>
+    <!-- Home -->
+    <section id="tab-home" class="tab-content w-full">
+      <div class="bg-white card-border rounded-2xl p-6 shadow-xl w-full mb-4">
+        <div class="flex justify-between mb-4">
+          <div>
+            <h2 class="text-lg font-semibold flex items-center gap-2">
+              <i class="fa-solid fa-calendar"></i> Period
+            </h2>
+            <input type="text" readonly id="periodDisplay" class="bg-gray-100 rounded mt-2 p-2 text-center font-bold text-lg tracking-widest" value="---" />
+          </div>
+          <div>
+            <h2 class="text-lg font-semibold flex items-center gap-2">
+              <i class="fa-solid fa-rocket"></i> Prediction
+            </h2>
+            <div id="predictionDisplay" class="bg-gray-100 rounded mt-2 p-2 text-center font-bold text-lg">Waiting...</div>
+          </div>
+        </div>
+        <div class="mt-4">
+          <p class="text-sm text-black text-bold">Accuracy</p>
+          <div class="w-full h-2 bg-green-100 rounded-full mt-1">
+            <div id="winRateFill" class="h-2 bg-green-400 rounded-full confidence-bar" style="width: 0%;"></div>
+          </div>
+          <p id="winAccuracy" class="text-xs text-black text-bold mt-1">0%</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- History -->
+    <section id="tab-history" class="tab-content hidden w-full">
+      <div class="bg-white rounded-2xl p-6 shadow-lg w-full mb-4">
+        <h3 class="text-xl font-bold text-green-600 mb-4">Prediction History</h3>
+        <div id="historyContainer"></div>
+      </div>
+    </section>
+
+<!-- CUSTOMIZE TAB -->
+<section id="tab-customize" class="tab-content hidden w-full">
+  <div class="bg-white rounded-2xl p-6 shadow-lg w-full max-h-[90vh] overflow-y-auto space-y-6">
+   
+    <h3 class="text-xl font-bold text-green-600">Customize</h3>
+
+    <!-- Theme Selector -->
+    <div class="bg-gray-50 rounded p-4 shadow-sm">
+      <label class="block mb-1 font-semibold">Theme</label>
+      <select id="customThemeSelect" class="w-full p-2 border rounded">
+        <option value="ocean">Ocean</option>
+        <option value="galaxy">Galaxy</option>
+        <option value="forest">Forest</option>
+        <option value="rose">Rose</option>
+        <option value="space">Space</option>
+        <option value="matrix">Matrix</option>
+      </select>
+    </div>
+
+    <!-- Background Gallery Container -->
+    <div class="bg-gray-50 rounded p-4 shadow-sm">
+      <h3 class="block mb-2 font-semibold">Background Gallery</h3>
+      <div class="grid grid-cols-3 gap-2">
+        <img src="https://i.postimg.cc/Y9kZ6s4y/5b91119c8d31501c9853783c93b3cae9.jpg" class="w-20 h-20 bg-thumb cursor-pointer rounded-lg border-2 border-transparent hover:border-green-500" />
+        <img src="https://i.postimg.cc/G2QNqxG3/2dfb443457f733ea3c7320cefe576dd1.jpg" class="w-20 h-20 bg-thumb cursor-pointer rounded-lg border-2 border-transparent hover:border-green-500" />
+        <img src="https://i.postimg.cc/bwD7pbcL/74c0747da12a00bd96347b7c1b827c9a.jpg" class="w-20 h-20 bg-thumb cursor-pointer rounded-lg border-2 border-transparent hover:border-green-500" />
+        <img src="https://i.postimg.cc/vHSJJhjc/1cf13db7ffe2d8e480402cc091dc73e3.jpg" class="w-20 h-20 bg-thumb cursor-pointer rounded-lg border-2 border-transparent hover:border-green-500" />
+        <img src="https://i.postimg.cc/wBDnspBm/109db93b608148dc5962e21995197cae.jpg" class="w-20 h-20 bg-thumb cursor-pointer rounded-lg border-2 border-transparent hover:border-green-500" />
+        <img src="https://i.postimg.cc/y8Mwdd7K/0e8fa64444fc8c5656ac1c0e01063af3.jpg" class="w-20 h-20 bg-thumb cursor-pointer rounded-lg border-2 border-transparent hover:border-green-500" />
+        <img src="https://i.postimg.cc/wBnXZ2nc/0d6f58f99f9475cc3f4bd425dee02486.jpg" class="w-20 h-20 bg-thumb cursor-pointer rounded-lg border-2 border-transparent hover:border-green-500" />
+        <img src="https://i.postimg.cc/3NTgJR8k/24ff601514f9d6e205e6b1386a10143c.jpg" class="w-20 h-20 bg-thumb cursor-pointer rounded-lg border-2 border-transparent hover:border-green-500" />
+        <img src="https://i.postimg.cc/tC02cqFn/df1575008f91d88323519937d7c3c7af.jpg" class="w-20 h-20 bg-thumb cursor-pointer rounded-lg border-2 border-transparent hover:border-green-500" />
+ 
+      </div>
+    </div>
+
+    <!-- Font Selector -->
+    <div class="bg-gray-50 rounded p-4 shadow-sm">
+      <label class="block mb-1 font-semibold">Font Style</label>
+      <select id="fontSelect" class="w-full p-2 border rounded">
+        <option value="'El Messiri', sans-serif">El Messiri</option>
+        <option value="'Exo 2', sans-serif">Exo 2</option>
+        <option value="'Orbitron', sans-serif">Orbitron</option>
+        <option value="'Share Tech', sans-serif">Share Tech</option>
+        <option value="Courier New, monospace">Courier New</option>
+        <option value="Times New Roman, serif">Times Roman</option>
+      </select>
+    </div>
+
+  </div>
+</section>
+
+
+
+
+    <!-- Settings -->
+
+<section id="tab-settings" class="tab-content hidden w-full">
+  <div id="settingsWrapper" class="bg-white rounded-2xl p-6 shadow-lg w-full space-y-6 mb-4">
+    <h3 class="text-xl font-bold text-green-600">Settings</h3>
+
+    <!-- About Popup -->
+    <div class="flex items-center justify-between">
+      <label>About</label>
+      <i id="aboutBtn" class="fa-solid fa-circle-info text-blue-500 cursor-pointer text-xl"></i>
+    </div>
+
+
+<!-- Watch Video Card -->
+<div class="flex justify-between items-center mt-4 bg-gray-100 p-3 rounded-lg shadow cursor-pointer hover:bg-gray-200" id="watchVideoBtn">
+  <span class="font-semibold text-black">Watch Video</span>
+  <i class="fa-solid fa-play-circle text-green-600 text-xl"></i>
+</div>
+
+<!-- Video Popup -->
+<div id="videoPopup" class="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center hidden z-50">
+  <div class="bg-white rounded-xl max-w-xl w-full relative">
+    <button id="closeVideoPopup" class="absolute top-2 right-2 text-gray-700 hover:text-gray-900 text-2xl">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+    <div class="p-4">
+      <iframe id="videoFrame" width="100%" height="315" src="" title="YouTube video" frameborder="0" allowfullscreen></iframe>
+    </div>
+  </div>
+</div>
+
+
+    <!-- Mobile Layout Dropdown -->
+    <div class="flex flex-col">
+      <label>Mobile Layout</label>
+      <select id="mobileLayoutSelect" class="w-full p-2 border rounded mt-1">
+        <option value="default">Default</option>
+        <option value="compact">Compact</option>
+        <option value="expanded">Expanded</option>
+      </select>
+    </div>
+
+    <!-- Notifications On/Off FA toggle -->
+    <div class="flex items-center justify-between">
+      <label>Notifications</label>
+      <i id="notificationsIcon" class="fa-solid fa-toggle-on text-green-500 cursor-pointer text-xl"></i>
+    </div>
+
+    <!-- Text Effects Dropdown -->
+    <div class="flex flex-col">
+      <label>Text Effects</label>
+      <select id="textEffectsSelect" class="w-full p-2 border rounded mt-1">
+        <option value="none">None</option>
+        <option value="glow">Glow</option>
+        <option value="outline">Outline</option>
+        <option value="shadow">Shadow</option>
+      </select>
+    </div>
+
+    <!-- Data Export -->
+    <div class="flex items-center justify-between">
+      <label>Export Data</label>
+      <i id="exportDataBtn" class="fa-solid fa-file-export text-purple-500 cursor-pointer text-xl"></i>
+    </div>
+
+    <!-- Clear History -->
+    <div class="flex items-center justify-between">
+      <label>Clear History</label>
+      <i id="clearHistoryBtn" class="fa-solid fa-trash text-red-500 cursor-pointer text-xl"></i>
+    </div>
+
+<!-- Join Channel -->
+<div class="settings-item" onclick="window.open('https://t.me/+zpI5p68mZqZkNTFl', '_blank')">
+    <span class="settings-text">Join Channel</span>
+    <i class="fas fa-paper-plane settings-icon"></i>
+</div>
+
+<!-- Contact Owner -->
+<div class="settings-item" onclick="window.open('https://t.me/synzio005', '_blank')">
+    <span class="settings-text">Contact Owner</span>
+    <i class="fas fa-user settings-icon"></i>
+</div>
+
+
+
+  </div>
+
+
+  <!-- About Popup Modal -->
+  <div id="aboutModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-xl p-6 w-11/12 max-w-lg space-y-4">
+      <h4 class="text-lg font-bold">ABOUT SYNZIO ULTRA V4</h4>
+      <p class="text-sm max-h-64 overflow-y-auto">Synzio Ultra V4 is an advanced prediction system designed to deliver highly accurate, real-time forecasting for number-based games and market-style outcomes. Built with a combination of algorithmic logic, probability analysis, and adaptive AI enhancements, it aims to consistently provide precise predictions with an impressive accuracy rate. Unlike basic systems that rely solely on repetitive patterns, Synzio Ultra incorporates multiple variables such as statistical trends, dynamic calculations, and randomized probability balancing to ensure reliable results. The platform features a sleek, intuitive interface where users can view live predictions, confidence percentages, and historical performance data for complete transparency. With its ability to generate results in seconds, Synzio Ultra is well-suited for competitive, fast-paced environments. It also includes customization options for themes, layouts, and notification preferences, ensuring a personalized user experience. The built-in history tracker allows users to analyze past predictions, identify winning streaks, and refine their strategies. Designed for accessibility across devices, Synzio Ultra offers a smooth, mobile-friendly performance, making it ideal for on-the-go users. Whether for casual entertainment or more strategic prediction purposes, Synzio Ultra stands out as a dependable, high-performance solution that blends accuracy, design, and innovation into one powerful system.</p>
+      <div class="flex justify-end space-x-2">
+        <button id="closeAbout" class="px-4 py-2 bg-green-500 text-white rounded">Close</button>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+
+
+  </main>
+
+<nav class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-md rounded-3xl shadow-xl flex justify-around w-11/12 max-w-md p-2 z-50">
+  <button class="tab-btn flex flex-col items-center justify-center px-4 py-2 text-gray-600 hover:text-green-500 active:text-green-600" data-tab="home">
+    <i class="fa-solid fa-house fa-lg"></i>
+
+  </button>
+  <button class="tab-btn flex flex-col items-center justify-center px-4 py-2 text-gray-600 hover:text-green-500" data-tab="history">
+    <i class="fa-regular fa-clock fa-lg"></i>
+  
+  </button>
+  <button class="tab-btn flex flex-col items-center justify-center px-4 py-2 text-gray-600 hover:text-green-500" data-tab="customize">
+    <i class="fa-solid fa-palette fa-lg"></i>
+  
+  </button>
+  <button class="tab-btn flex flex-col items-center justify-center px-4 py-2 text-gray-600 hover:text-green-500" data-tab="settings">
+    <i class="fa-solid fa-gear fa-lg"></i>
+  
+  </button>
+</nav>
+
+<script>
+
+let historyData = [];
+let lastPeriod = null;
+
+// Fonts available
+const fonts = {
+  "El Messiri": "'El Messiri', sans-serif",
+  "Exo 2": "'Exo 2', sans-serif",
+  "Orbitron": "'Orbitron', sans-serif",
+  "Share Tech": "'Share Tech', sans-serif",
+  "Courier New": "'Courier New', monospace",
+  "Times New Roman": "'Times New Roman', serif"
+};
+
+// Themes that change everything
+const themes = {
+  ocean: {
+    bodyBg: "linear-gradient(to bottom, #0e7490, #06b6d4)",
+    textColor: "#000",
+    cardBg: "#22c55e",
+    cardText: "#000",
+    navBg: "#0369a1",
+    navText: "#000",
+    inputBg: "#fff",
+    inputText: "#000",
+  },
+  galaxy: {
+    bodyBg: "linear-gradient(to bottom, #1e3a8a, #9333ea)",
+    textColor: "#000",
+    cardBg: "#7c3aed",
+    cardText: "#000",
+    navBg: "#4c1d95",
+    navText: "#000",
+    inputBg: "#fff",
+    inputText: "#000",
+  },
+  forest: {
+    bodyBg: "linear-gradient(to bottom, #065f46, #10b981)",
+    textColor: "#000",
+    cardBg: "#047857",
+    cardText: "#000",
+    navBg: "#064e3b",
+    navText: "#000",
+    inputBg: "#fff",
+    inputText: "#000",
+  },
+  rose: {
+    bodyBg: "linear-gradient(to bottom, #be185d, #f472b6)",
+    textColor: "#000",
+    cardBg: "#db2777",
+    cardText: "#000",
+    navBg: "#9d174d",
+    navText: "#000",
+    inputBg: "#fff",
+    inputText: "#000",
+  },
+  space: {
+    bodyBg: "linear-gradient(to bottom, #0f172a, #3b82f6)",
+    textColor: "#000",
+    cardBg: "#1e40af",
+    cardText: "#000",
+    navBg: "#1e3a8a",
+    navText: "#000",
+    inputBg: "#fff",
+    inputText: "#000",
+  },
+  matrix: {
+    bodyBg: "#000000",
+    textColor: "#000",
+    cardBg: "#22c55e",
+    cardText: "#000",
+    navBg: "#022c22",
+    navText: "#000",
+    inputBg: "#fff",
+    inputText: "#000",
+  },
+};
+
+const settingsWrapper = document.getElementById("settingsWrapper");
+
+// About Popup
+const aboutBtn = document.getElementById("aboutBtn");
+const aboutModal = document.getElementById("aboutModal");
+const closeAbout = document.getElementById("closeAbout");
+aboutBtn.addEventListener("click", () => aboutModal.classList.remove("hidden"));
+closeAbout.addEventListener("click", () => aboutModal.classList.add("hidden"));
+
+const watchBtn = document.getElementById("watchVideoBtn");
+const videoPopup = document.getElementById("videoPopup");
+const closeBtn = document.getElementById("closeVideoPopup");
+const videoFrame = document.getElementById("videoFrame");
+
+// Replace this URL with your YouTube embed URL
+const videoURL = "https://youtube.com/embed/y232dcEXmCE?feature=shared";
+
+watchBtn.addEventListener("click", () => {
+  videoFrame.src = videoURL;
+  videoPopup.classList.remove("hidden");
+});
+
+closeBtn.addEventListener("click", () => {
+  videoFrame.src = ""; // Stop video
+  videoPopup.classList.add("hidden");
+});
+
+// Close popup on clicking outside the video container
+videoPopup.addEventListener("click", (e) => {
+  if(e.target === videoPopup){
+    videoFrame.src = "";
+    videoPopup.classList.add("hidden");
+  }
+});
+
+
+// Mobile Layout Dropdown
+const mobileLayoutSelect = document.getElementById("mobileLayoutSelect");
+mobileLayoutSelect.addEventListener("change", e => {
+  const val = e.target.value;
+  document.getElementById("settingsWrapper").dataset.mobileLayout = val; // just for styling
+  console.log("Mobile layout:", val);
+});
+
+// Notifications On/Off FA toggle
+let notificationsOn = true;
+const notificationsIcon = document.getElementById("notificationsIcon");
+notificationsIcon.addEventListener("click", () => {
+  notificationsOn = !notificationsOn;
+  notificationsIcon.classList.toggle("fa-toggle-on", notificationsOn);
+  notificationsIcon.classList.toggle("fa-toggle-off", !notificationsOn);
+  notificationsIcon.classList.toggle("text-green-500", notificationsOn);
+  notificationsIcon.classList.toggle("text-gray-500", !notificationsOn);
+  console.log("Notifications:", notificationsOn);
+});
+
+// Text Effects Dropdown
+const textEffectsSelect = document.getElementById("textEffectsSelect");
+textEffectsSelect.addEventListener("change", e => {
+  document.getElementById("settingsWrapper").classList.remove("glow-text", "outline-text", "shadow-text");
+  if(e.target.value === "glow") settingsWrapper.classList.add("glow-text");
+  if(e.target.value === "outline") settingsWrapper.classList.add("outline-text");
+  if(e.target.value === "shadow") settingsWrapper.classList.add("shadow-text");
+});
+
+// Data Export
+document.getElementById("exportDataBtn").addEventListener("click", () => {
+  const data = JSON.stringify(historyData, null, 2);
+  const blob = new Blob([data], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "prediction_history.json";
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+// Delete History Custom Modal
+const deleteHistoryModal = document.getElementById("deleteHistoryModal");
+const cancelDeleteBtn = document.getElementById("cancelDeleteHistory");
+const confirmDeleteBtn = document.getElementById("confirmDeleteHistory");
+const clearHistoryBtn = document.getElementById("clearHistoryBtn");
+
+clearHistoryBtn.addEventListener("click", () => {
+  deleteHistoryModal.classList.remove("hidden"); // show modal
+});
+
+cancelDeleteBtn.addEventListener("click", () => {
+  deleteHistoryModal.classList.add("hidden"); // hide modal
+});
+
+confirmDeleteBtn.addEventListener("click", () => {
+  historyData = [];      // clear history
+  updateHistory();       // refresh UI
+  deleteHistoryModal.classList.add("hidden"); // hide modal
+});
+
+
+function updateConfidence() {
+    const randomConfidence = (Math.random() * (95 - 85) + 85).toFixed(1); 
+    document.getElementById("confidence").textContent = randomConfidence + "%";
+}
+
+
+// Prediction functions
+function getCurrentPeriod() {
+  const now = new Date();
+  const y = now.getUTCFullYear();
+  const m = String(now.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(now.getUTCDate()).padStart(2, '0');
+  const totalMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+  return `${y}${m}${d}1000${10001 + totalMinutes}`;
+}
+
+let historyResults = []; // store actual past results
+const MAX_HISTORY = 10;  // keep recent 10 rounds
+
+function generatePrediction(period) {
+  // === Base Scoring Logic ===
+  const digits = period.split('').map(Number);
+  const sum = digits.reduce((a, b) => a + b, 0);
+  const lastDigit = digits[digits.length - 1];
+  const minute = parseInt(period.slice(-2));
+
+  let bigScore = 0, smallScore = 0;
+
+  if (sum % 3 === 0) bigScore += 2;
+  if (sum % 4 === 0) smallScore += 2;
+
+  if ([0, 3, 6, 9].includes(lastDigit)) smallScore += 1.5;
+  else bigScore += 1.5;
+
+  if (minute % 5 === 0 || minute % 7 === 0) smallScore += 2;
+  else if (minute % 2 === 0) bigScore += 1;
+
+  // === History-Based Adjustment ===
+  const recentLosses = countRecentLosses();
+  if (recentLosses >= 2) {
+    // Favor the opposite of the last losing predictions
+    const lastOutcome = historyResults[historyResults.length - 1]?.actual;
+    if (lastOutcome) {
+      if (lastOutcome === "BIG") smallScore += 3;
+      else bigScore += 3;
+    }
+  }
+
+  // === Final Decision ===
+  const prediction = bigScore >= smallScore ? "BIG" : "SMALL";
+  const probability = Math.min(95, Math.max(85, Math.round(85 + Math.abs(bigScore - smallScore) * 2)));
+
+  return { prediction, probability };
+}
+
+function countRecentLosses() {
+  let losses = 0;
+  for (let i = historyResults.length - 1; i >= 0; i--) {
+    if (!historyResults[i].win) losses++;
+    else break;
+  }
+  return losses;
+}
+
+// Register actual outcome for tracking
+function registerResult(actual, predicted) {
+  const win = actual === predicted;
+  historyResults.push({ actual, predicted, win });
+
+  if (historyResults.length > MAX_HISTORY) historyResults.shift();
+}
+
+
+function showPredictionNotification(prediction, period) {
+  const lastThree = period.slice(-3);
+  const notify = document.getElementById("predictionNotify");
+  document.getElementById("notifyText").innerText = `BET ${lastThree} ON ${prediction}`;
+  notify.classList.add("show");
+  setTimeout(() => notify.classList.remove("show"), 3000);
+}
+
+function updateHistory() {
+  const container = document.getElementById("historyContainer");
+  container.innerHTML = historyData
+    .map((item, index) => `
+      <div class="history-card flex items-center text-sm">
+        
+        <!-- Icon appears inline ONLY for current period -->
+        ${index === 0 
+          ? `<i class="fa-solid fa-c fa-spin text-yellow-600 mr-4"></i>`
+          : ""
+        }
+
+        <!-- Main history content -->
+        <div class="flex flex-1 justify-around">
+          <div class="flex flex-col items-center">
+            <span class="font-semibold text-green-700"><i class="fa-solid fa-microchip"></i> Period</span>
+            <span class="text-black">${item.period}</span>
+          </div>
+          <div class="flex flex-col items-center">
+            <span class="font-semibold text-green-700"><i class="fa-solid fa-fire"></i> Prediction</span>
+            <span class="text-black">${item.prediction}</span>
+          </div>
+          <div class="flex flex-col items-center">
+            <span class="font-semibold text-green-700"><i class="fa-solid fa-bolt"></i> Accuracy</span>
+            <span class="text-black">${item.probability}%</span>
+          </div>
+        </div>
+
+        <!-- Delete button at right -->
+        <button onclick="deleteHistoryItem(${index})" class="ml-4 text-red-500 hover:text-red-700">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      </div>
+    `).join("");
+}
+
+
+function deleteHistoryItem(index) {
+  historyData.splice(index, 1);
+  updateHistory();
+}
+
+
+  
+function updatePrediction() {
+  const fullPeriod = getCurrentPeriod();
+  const lastThree = fullPeriod.slice(-3);
+  if (fullPeriod !== lastPeriod) {
+    const pred = generatePrediction(fullPeriod);
+    document.getElementById("periodDisplay").value = lastThree;
+    document.getElementById("predictionDisplay").innerText = pred.prediction;
+    document.getElementById("winRateFill").style.width = pred.probability + "%";
+    document.getElementById("winAccuracy").innerText = pred.probability + "%";
+    showPredictionNotification(pred.prediction, fullPeriod);
+    historyData.unshift({ period: lastThree, prediction: pred.prediction, probability: pred.probability });
+    updateHistory();
+    lastPeriod = fullPeriod;
+  }
+}
+
+// Tab switching
+const tabs = ["home", "history", "settings", "customize"];
+const tabButtons = document.querySelectorAll("nav button");
+const tabContents = tabs.map(tab => document.getElementById(`tab-${tab}`));
+
+tabButtons.forEach(btn => {
+  btn.addEventListener("click", () => {
+    const selected = btn.getAttribute("data-tab");
+    tabButtons.forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    tabContents.forEach(content => content.classList.add("hidden"));
+    document.getElementById(`tab-${selected}`).classList.remove("hidden");
+  });
+});
+
+// Font selector
+document.getElementById("fontSelect").addEventListener("change", e => {
+  const selectedFont = e.target.value;
+
+  // Apply font to body
+  document.body.style.fontFamily = selectedFont;
+
+  // Apply font to all text elements except Font Awesome icons
+  document.querySelectorAll(".tab-content, .tab-content *:not(i, .fa, .fas, .far, .fab)").forEach(el => {
+    el.style.fontFamily = selectedFont;
+  });
+});
+
+// Theme selector
+document.getElementById("customThemeSelect").addEventListener("change", e => {
+  const theme = themes[e.target.value];
+  if(theme){
+    document.body.style.background = theme.bodyBg;
+    document.body.style.color = theme.textColor;
+    document.querySelectorAll(".card-border, .tab-content > div").forEach(card => {
+      card.style.background = theme.cardBg;
+      card.style.color = theme.cardText;
+      card.style.borderColor = theme.cardText;
+    });
+    document.querySelector("nav").style.background = theme.navBg;
+    document.querySelectorAll("nav button").forEach(btn => btn.style.color = theme.navText);
+    document.querySelectorAll("input, select, textarea").forEach(inp => {
+      inp.style.background = theme.inputBg;
+      inp.style.color = theme.inputText;
+    });
+  }
+});
+
+// Select all background thumbnails
+document.querySelectorAll(".bg-thumb").forEach(img => {
+  img.addEventListener("click", () => {
+    // Set body background to selected image
+    document.body.style.background = `url(${img.src}) center/cover no-repeat`;
+    
+    // Optional: highlight selected thumbnail
+    document.querySelectorAll(".bg-thumb").forEach(i => i.style.borderColor = "transparent");
+    img.style.borderColor = "#22c55e"; // green highlight
+  });
+});
+
+
+setInterval(updatePrediction, 5000);
+updatePrediction();
+
+  </script>
+</body>
+</html>

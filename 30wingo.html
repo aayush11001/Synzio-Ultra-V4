@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SYNZIO ULTRA V4</title>
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <style>
+    body {
+      font-family: 'Exo 2', sans-serif;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #000;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+    }
+    .container {
+      width: 390px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 0 25px rgba(0,0,0,0.6);
+      overflow: hidden;
+      animation: fadeIn 1.2s ease;
+      position: relative;
+      z-index: 1;
+    }
+    @keyframes fadeIn {
+      from {opacity: 0; transform: translateY(30px);}
+      to {opacity: 1; transform: translateY(0);}
+    }
+    .header {
+      padding: 20px;
+      text-align: center;
+      border-bottom: 1px solid rgba(255,255,255,0.15);
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 26px;
+      color: #FFD700;
+      text-shadow: 0 0 10px rgba(255,215,0,0.6);
+    }
+    .subtext {
+      font-size: 14px;
+      margin-top: 6px;
+      opacity: 0.8;
+    }
+    .card {
+      padding: 20px;
+      margin: 15px;
+      border-radius: 15px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    .card p {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 5px 0;
+      font-size: 18px;
+    }
+    .card i {
+      margin-right: 8px;
+      color: #FFD700;
+    }
+    #result, #numberResult {
+      font-weight: bold;
+      font-size: 22px;
+      transition: all 0.3s ease;
+    }
+    .history-header {
+      display:flex;
+      justify-content: space-between;
+      align-items:center;
+      margin:0 0 10px;
+      color:lime;
+      font-size:18px;
+    }
+    .history-header i {
+      cursor:pointer;
+      color:lime;
+    }
+    .history {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 220px;
+      overflow-y: auto;
+      padding-right: 5px;
+    }
+    .history-item {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 10px;
+      padding: 10px;
+      padding-right: 40px;
+      font-size: 14px;
+      animation: fadeInItem 0.6s ease;
+      position: relative;
+    }
+    .delete-entry {
+      position: absolute;
+      top: 50%;
+      right: 10px;
+      transform: translateY(-50%);
+      cursor: pointer;
+      color: #FF6B6B;
+    }
+    @keyframes fadeInItem {
+      from {opacity: 0; transform: translateY(15px);}
+      to {opacity: 1; transform: translateY(0);}
+    }
+    .history-item p {
+      margin: 5px 0;
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+    }
+    .footer {
+      padding: 12px;
+      text-align: center;
+      font-size: 12px;
+      opacity: 0.7;
+      border-top: 1px solid rgba(255,255,255,0.15);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="rain"></canvas>
+  <div class="container">
+    <div class="header">
+      <h1><i class="fab fa-napster"></i> SYNZIO ULTRA V4</h1>
+      <p class="subtext"><i class="fa-solid fa-server"></i> 30 Seconds Hack</p>
+    </div>
+
+    <!-- Separate Cards -->
+    <div class="card">
+      <p><span><i class="fa-regular fa-calendar"></i> Period</span> <span id="period">00000</span></p>
+    </div>
+    <div class="card">
+      <p><span><i class="fa-regular fa-hourglass-half fa-spin"></i> Time Left</span> <span id="timer">00:30</span></p>
+    </div>
+    <div class="card">
+      <p><span><i class="fa-solid fa-rocket"></i> Prediction</span> <span id="result">Pending...</span></p>
+    </div>
+    <!-- New Number Card -->
+    <div class="card">
+      <p><span><i class="fa-solid fa-cannabis"></i> Number</span> <span id="numberResult">-</span></p>
+    </div>
+
+    <!-- History -->
+    <div class="card">
+      <div class="history-header">
+        <span><i class="fa-solid fa-clock-rotate-left"></i> History</span>
+        <i class="fa-solid fa-trash-alt" title="Clear History" onclick="clearHistory()"></i>
+      </div>
+      <div class="history" id="history"></div>
+    </div>
+
+    <div class="footer">
+      <i class="fas fa-crown"></i> Owner of this hack is @Synzio005
+    </div>
+  </div>
+
+<script>
+  // ---------- Rain Drop Background ----------
+  const canvas = document.getElementById("rain");
+  const ctx = canvas.getContext("2d");
+  let w, h;
+  function resizeCanvas(){
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+  }
+  window.addEventListener("resize", resizeCanvas);
+  resizeCanvas();
+
+  class Raindrop {
+    constructor(){
+      this.reset();
+    }
+    reset(){
+      this.x = Math.random() * w;
+      this.y = Math.random() * -h;
+      this.len = Math.random() * 20 + 10;
+      this.speed = Math.random() * 4 + 4;
+      this.opacity = Math.random() * 0.5 + 0.5;
+    }
+    draw(){
+      ctx.strokeStyle = `rgba(174,194,224,${this.opacity})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(this.x, this.y);
+      ctx.lineTo(this.x, this.y + this.len);
+      ctx.stroke();
+    }
+    update(){
+      this.y += this.speed;
+      if(this.y > h) this.reset();
+    }
+  }
+
+  let drops = [];
+  for(let i=0; i<200; i++){ drops.push(new Raindrop()); }
+
+  function animateRain(){
+    ctx.fillStyle = "rgba(0,0,0,0.3)";
+    ctx.fillRect(0,0,w,h);
+    drops.forEach(d=>{
+      d.update();
+      d.draw();
+    });
+    requestAnimationFrame(animateRain);
+  }
+  animateRain();
+
+  // ---------- Prediction Logic ----------
+  let lastPeriod = "";
+  let resultHistory = JSON.parse(localStorage.getItem("resultHistory")) || [];
+  const maxHistory = 10;
+
+  function updatePeriodAndTimer() {
+    let now = new Date();
+    let startHour = 5, startMinute = 30;
+    let startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startHour, startMinute, 0);
+    let elapsedSeconds = Math.floor((now - startTime) / 1000);
+    if (elapsedSeconds < 0) {
+      startTime.setDate(startTime.getDate() - 1);
+      elapsedSeconds = Math.floor((now - startTime) / 1000);
+    }
+    let totalPeriods = Math.floor(elapsedSeconds / 30);
+    let upcomingPeriod = totalPeriods + 1;
+    let formattedDate = new Intl.DateTimeFormat('en-GB',{year:'numeric',month:'2-digit',day:'2-digit'}).format(now).replace(/\//g,'');
+    let periodNumber = `100005${String(upcomingPeriod).padStart(4,'0')}`;
+    let lastFourDigits = periodNumber.slice(-4);
+
+    if (periodNumber !== lastPeriod) {
+      lastPeriod = periodNumber;
+      generateResult(formattedDate + periodNumber, lastFourDigits);
+    }
+
+    document.getElementById("period").innerText = periodNumber.slice(-5);
+    let remainingSeconds = 30 - (elapsedSeconds % 30);
+    document.getElementById("timer").innerText = `00:${String(remainingSeconds).padStart(2,'0')}`;
+
+    setTimeout(updatePeriodAndTimer,1000);
+  }
+
+function generateResult(periodString, lastFourDigits) {
+  let digits = lastFourDigits.split('').map(Number);
+
+  // Step 1: Base sum & product
+  let sum = digits.reduce((a,b)=>a+b,0);
+  let product = digits.reduce((a,b)=>a*b,1);
+
+  // Step 2: Weighted value (adds complexity)
+  let weighted = (sum * 7 + product * 3 + digits[0]*5 + digits[3]*2) % 100;
+
+  // Step 3: Add a pseudo-random factor based on current time
+  let timeFactor = new Date().getSeconds() % 10;
+  let mixedValue = (weighted + timeFactor + periodString.length) % 10;
+
+  // Step 4: Prediction based on thresholds
+  let result;
+  if (mixedValue >= 7) {
+    result = "BIG";
+  } else if (mixedValue <= 2) {
+    result = "SMALL";
+  } else {
+    // Smart middle: decide by parity
+    result = (mixedValue % 2 === 0) ? "BIG" : "SMALL";
+  }
+
+  // Step 5: Predicted number
+  let resultNumber = mixedValue;
+
+  // --- UI Update ---
+  let resultElement = document.getElementById("result");
+  let numberElement = document.getElementById("numberResult");
+
+  resultElement.innerText = result;
+  numberElement.innerText = resultNumber;
+
+  let color = (result==="SMALL")?"#FF6B6B":"#4ECDC4";
+  resultElement.style.color = color;
+  resultElement.style.textShadow = `0 0 6px ${color}99`;
+  numberElement.style.color = color;
+  numberElement.style.textShadow = `0 0 6px ${color}99`;
+
+  // Save to history
+  resultHistory.unshift({period: periodString, prediction: result, number: resultNumber});
+  if(resultHistory.length>maxHistory) resultHistory.pop();
+  localStorage.setItem("resultHistory", JSON.stringify(resultHistory));
+  updateHistoryDisplay();
+}
+
+
+  function updateHistoryDisplay() {
+    const historyContainer = document.getElementById("history");
+    historyContainer.innerHTML='';
+    resultHistory.forEach((item,index)=>{
+      const historyItem=document.createElement("div");
+      historyItem.className="history-item";
+
+      let deleteBtn=document.createElement("i");
+      deleteBtn.className="fa-solid fa-trash delete-entry";
+      deleteBtn.title="Delete Entry";
+      deleteBtn.onclick=()=>{ deleteHistoryEntry(index); };
+
+      let p1=document.createElement("p");
+      p1.innerHTML=`<span><i class="fa-regular fa-calendar"></i> Period</span> <span>${item.period.slice(-5)}</span>`;
+
+      let p2=document.createElement("p");
+      p2.innerHTML=`<span><i class="fa-solid fa-rocket"></i> Prediction</span> <span style="color:${item.prediction==="SMALL"?"#FF6B6B":"#4ECDC4"}">${item.prediction}</span>`;
+
+      let p3=document.createElement("p");
+      p3.innerHTML=`<span><i class="fa-solid fa-cannabis"></i> Number</span> <span style="color:${item.prediction==="SMALL"?"#FF6B6B":"#4ECDC4"}">${item.number}</span>`;
+
+      historyItem.appendChild(deleteBtn);
+      historyItem.appendChild(p1);
+      historyItem.appendChild(p2);
+      historyItem.appendChild(p3);
+
+      historyContainer.appendChild(historyItem);
+    });
+  }
+
+  function deleteHistoryEntry(index){
+    resultHistory.splice(index,1);
+    localStorage.setItem("resultHistory", JSON.stringify(resultHistory));
+    updateHistoryDisplay();
+  }
+
+  function clearHistory(){
+    resultHistory=[];
+    localStorage.setItem("resultHistory", JSON.stringify(resultHistory));
+    updateHistoryDisplay();
+  }
+
+  document.addEventListener('DOMContentLoaded',()=>{
+    updateHistoryDisplay();
+    updatePeriodAndTimer();
+  });
+</script>
+</body>
+</html>

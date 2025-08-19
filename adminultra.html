@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SYNZIO ADMIN PANEL</title>
+  <link href="https://fonts.googleapis.com/css2?family=El+Messiri&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <style>
+    body {
+      font-family: 'El Messiri', sans-serif;
+      margin: 0;
+      background: black;
+      position: relative;
+      min-height: 100vh;
+    }
+
+    /* Galaxy starscape canvas */
+    #stars {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: -1;
+      background: black;
+    }
+
+    .panel, .key-box {
+      background: white;
+      padding: 18px 20px;
+      border-radius: 14px;
+      box-shadow: 0 6px 18px rgba(123, 63, 228, 0.12);
+      max-width: 420px;
+      width: 100%;
+      margin: 20px auto;
+    }
+
+    h2 {
+      color: black;
+      font-size: 20px;
+      margin-bottom: 14px;
+      text-align: center;
+    }
+
+    .input-group {
+      margin-bottom: 12px;
+    }
+
+    .input-group label {
+      font-weight: 600;
+      display: block;
+      margin-bottom: 4px;
+      color: cyan;
+      font-size: 0.9rem;
+    }
+
+    .input-group label i {
+      margin-right: 6px;
+      color: cyan;
+    }
+
+    .input-group input,
+    .input-group select {
+      width: 100%;
+      padding: 8px 10px;
+      font-family: 'El Messiri', sans-serif;
+      border-radius: 8px;
+      border: 1.5px solid cyan;
+      font-size: 0.9rem;
+      outline: none;
+      box-sizing: border-box;
+    }
+
+    .btn {
+      background: black;
+      color: white;
+      border: none;
+      padding: 10px;
+      width: 100%;
+      font-family: 'El Messiri', sans-serif;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(123, 63, 228, 0.25);
+      margin-top: 6px;
+    }
+
+    .key-box h3 {
+      color: cyan;
+      margin-bottom: 10px;
+      text-align: center;
+      font-size: 18px;
+    }
+
+    .key-entry {
+      background: #fdfcff;
+      border: 1px solid #e0d5fb;
+      border-left: 5px solid lime;
+      padding: 10px 12px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 6px rgba(123, 63, 228, 0.06);
+      position: relative;
+      font-size: 0.9rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .key-entry p {
+      margin: 3px 0;
+      font-size: 0.85rem;
+    }
+
+    .key-entry p strong i {
+      margin-right: 6px;
+      color: cyan;
+    }
+
+    /* Compact floating status widget */
+    .status-widget {
+      position: absolute;
+      top: 6px;
+      right: 8px;
+      padding: 2px 8px;
+      font-size: 0.7rem;
+      font-weight: bold;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .status-widget .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.9); opacity: 0.7; }
+      50% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(0.9); opacity: 0.7; }
+    }
+
+    .active { background: #d1fae5; color: #065f46; }
+    .expired { background: #fee2e2; color: #b91c1c; }
+    .expired .dot { background: #ef4444; animation: none; }
+
+    /* Trash icon */
+    .delete-icon {
+      align-self: flex-end;
+      margin-top: 6px;
+      cursor: pointer;
+      color: #e03e3e;
+      font-size: 1.1rem;
+      transition: transform 0.2s ease, color 0.2s ease;
+    }
+    .delete-icon:hover {
+      color: #b91c1c;
+      transform: scale(1.15);
+    }
+
+    /* Toast message */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #7b3fe4;
+      color: white;
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-weight: bold;
+      box-shadow: 0 6px 15px rgba(123, 63, 228, 0.3);
+      font-family: 'El Messiri', sans-serif;
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .toast.show { opacity: 1; }
+
+    /* Delete confirmation popup */
+    .popup {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      background: rgba(0,0,0,0.6);
+      z-index: 9999;
+    }
+    .popup-content {
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(15px);
+      border-radius: 12px;
+      padding: 25px;
+      text-align: center;
+      width: 300px;
+      box-shadow: 0 0 25px rgba(0,0,0,0.6);
+      animation: fadeIn 0.3s ease;
+      color: white;
+    }
+    .popup-buttons {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 20px;
+    }
+    .popup-buttons button {
+      padding: 8px 15px;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      font-family: 'El Messiri', sans-serif;
+    }
+    .popup-buttons .cancel {
+      background: rgba(0,150,255,0.2);
+      color: #00c8ff;
+    }
+    .popup-buttons .confirm {
+      background: rgba(255,0,70,0.25);
+      color: #ff4d6d;
+    }
+    .popup-buttons button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 10px rgba(255,255,255,0.3);
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.95);}
+      to { opacity: 1; transform: scale(1);}
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+
+<div class="panel">
+  <h2><i class="fab fa-napster"></i> SYNZIO ADMIN PANEL</h2>
+  <div class="input-group">
+    <label><i class="fas fa-user-circle"></i> Enter Random Key</label>
+    <input id="keyInput" type="text" placeholder="e.g. MY-SPECIAL-KEY" />
+  </div>
+  <div class="input-group">
+    <label><i class="fas fa-hourglass-half"></i> Expiry Duration</label>
+    <div style="display:flex; gap:6px;">
+      <input id="expiryValue" type="number" placeholder="e.g. 5" />
+      <select id="expiryUnit">
+        <option value="minutes">Minutes</option>
+        <option value="hours">Hours</option>
+        <option value="days">Days</option>
+      </select>
+    </div>
+  </div>
+  <button class="btn" onclick="addKey()"><i class="fas fa-plus-circle"></i> ADD KEY</button>
+</div>
+
+<div class="key-box">
+  <h3><i class="fas fa-list"></i> ALL KEYS</h3>
+  <div id="keyList"></div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast"><i id="toastIcon" class="fas fa-check-circle"></i><span id="toastText">KEY ADDED</span></div>
+
+<!-- Delete Confirmation Popup -->
+<div id="deletePopup" class="popup">
+  <div class="popup-content">
+    <h3>Sure, delete this key ?</h3>
+    <div class="popup-buttons">
+      <button class="cancel" onclick="closePopup()">Cancel</button>
+      <button class="confirm" id="confirmDelete">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Firebase setup
+  const firebaseConfig = {
+    apiKey: "AIzaSyDENq_gGaeC6RDkS3plfqHfyWNBH-nIkN8",
+    authDomain: "adnan-db623.firebaseapp.com",
+    databaseURL: "https://adnan-db623-default-rtdb.firebaseio.com",
+    projectId: "adnan-db623",
+    storageBucket: "adnan-db623.appspot.com",
+    messagingSenderId: "150291253420",
+    appId: "1:150291253420:web:b380ea925af7ea1f23f709"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  // Toast
+  function showToast(message, iconClass = "fa-check-circle") {
+    const toast = document.getElementById("toast");
+    const toastIcon = document.getElementById("toastIcon");
+    const toastText = document.getElementById("toastText");
+    toastText.textContent = message;
+    toastIcon.className = "fas " + iconClass;
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 2200);
+  }
+
+  // Add Key
+  function addKey() {
+    const key = document.getElementById("keyInput").value.trim();
+    const expiryValue = parseInt(document.getElementById("expiryValue").value.trim());
+    const expiryUnit = document.getElementById("expiryUnit").value;
+    if (!key || isNaN(expiryValue)) {
+      alert("Enter valid key and duration.");
+      return;
+    }
+    const data = { created: Date.now(), duration: expiryValue, unit: expiryUnit };
+    db.ref("validKeys/" + key).set(data, err => {
+      if (err) alert("Error adding key.");
+      else {
+        document.getElementById("keyInput").value = "";
+        document.getElementById("expiryValue").value = "";
+        showToast("KEY ADDED SUCCESSFULLY");
+      }
+    });
+  }
+
+  // Delete Popup logic
+  let keyToDelete = null;
+  function openPopup(key) {
+    keyToDelete = key;
+    document.getElementById("deletePopup").style.display = "flex";
+  }
+  function closePopup() {
+    document.getElementById("deletePopup").style.display = "none";
+    keyToDelete = null;
+  }
+  document.getElementById("confirmDelete").addEventListener("click", () => {
+    if (keyToDelete) {
+      db.ref("validKeys/" + keyToDelete).remove(() => {
+        showToast("KEY DELETED", "fa-trash");
+      });
+    }
+    closePopup();
+  });
+
+  // Realtime Key List
+  db.ref("validKeys").on("value", snap => {
+    const container = document.getElementById("keyList");
+    container.innerHTML = "";
+    snap.forEach(child => {
+      const key = child.key;
+      const data = child.val();
+      const created = new Date(data.created).toLocaleString();
+      let durationMs = 0;
+      if (data.unit === "minutes") durationMs = data.duration * 60 * 1000;
+      if (data.unit === "hours") durationMs = data.duration * 3600 * 1000;
+      if (data.unit === "days") durationMs = data.duration * 86400000;
+      const expiryDate = new Date(data.created + durationMs);
+      const expired = Date.now() > expiryDate.getTime();
+      const div = document.createElement("div");
+      div.className = "key-entry";
+      div.innerHTML = `
+        <div class="status-widget ${expired ? 'expired' : 'active'}">
+          <span class="dot"></span>${expired ? 'Expired' : 'Active'}
+        </div>
+        <p><strong><i class="fas fa-key"></i> Key :</strong> ${key}</p>
+        <p><strong><i class="fas fa-calendar"></i> Created :</strong> ${created}</p>
+        <p><strong><i class="fas fa-hourglass-half fa-spin"></i> Expires :</strong> ${expiryDate.toLocaleString()}</p>
+        <i class="fas fa-trash delete-icon" onclick="openPopup('${key}')"></i>
+      `;
+      container.appendChild(div);
+    });
+  });
+
+  // Galaxy Starscape
+  const canvas = document.getElementById("stars");
+  const ctx = canvas.getContext("2d");
+  let stars = [];
+  function resizeCanvas() {
+    canvas.width = innerWidth;
+    canvas.height = innerHeight;
+    stars = [];
+    for (let i = 0; i < 160; i++) {
+      stars.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*1.2, s: Math.random()*0.4+0.1 });
+    }
+  }
+  function animateStars() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle="white";
+    stars.forEach(star=>{
+      ctx.beginPath();
+      ctx.arc(star.x, star.y, star.r, 0, 2*Math.PI);
+      ctx.fill();
+      star.y += star.s;
+      if(star.y > canvas.height){ star.y=0; star.x=Math.random()*canvas.width; }
+    });
+    requestAnimationFrame(animateStars);
+  }
+  addEventListener("resize", resizeCanvas);
+  resizeCanvas(); animateStars();
+</script>
+</body>
+</html>
